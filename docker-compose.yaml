@@ -1,0 +1,79 @@
+version: '3.4'
+
+x-base-environment: &base-environment
+  image: api
+  env_file: .env
+  volumes:
+    - ./api:/src/api
+    - ./.local:/src/.local
+  environment:
+    - POSTGRES_USER=api_user
+    - POSTGRES_HOST=postgres
+    - POSTGRES_PASSWORD=dummy
+    - POSTGRES_DATABASE=api
+    - POSTGRES_PORT=5432
+
+# Common configuration shared across the different instances of the Django
+# application. Referenced with an anchor and alias to avoid repetition
+x-base-app: &base-app
+  <<: *base-environment
+  depends_on:
+    - worker-queue
+    - migrate-db
+    - postgres
+
+services:
+  postgres:
+    image: postgres
+    container_name: api-postgres-db
+    environment:
+      - POSTGRES_USER=api_user
+      - POSTGRES_PASSWORD=dummy
+      - POSTGRES_DB=api
+  
+  worker-queue:
+    image: redis:6
+
+  # Migrates the postgres database to be up to date
+  migrate-db:
+    <<: *base-environment
+    build:
+      context: .
+    command: ["/src/scripts/release.sh"]
+    depends_on:
+      - postgres
+
+  # Ensures that a superuser exists in the system
+  create-superuser:
+    <<: *base-app
+    container_name: create-superuser
+    command: ["/src/manage.py", "init_local_env"]
+
+  web:
+    <<: *base-app
+    container_name: web
+    command:
+      - /src/manage.py
+      - runserver
+      - "0.0.0.0:80"
+    ports:
+      - "80:80"
+
+  task-worker:
+    <<: *base-app
+    container_name: task-worker
+    command: >
+      watchmedo auto-restart --directory=./ --pattern=*.py --recursive -- celery -A api.config worker -l info
+
+  periodic-worker:
+    <<: *base-app
+    container_name: periodic-worker
+    command: >
+      watchmedo auto-restart --directory=./ --pattern=*.py --recursive -- celery -A api.config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    environment:
+      - PRE_RUN_SLEEP=10  # since the migration needs to occur first
+      - POSTGRES_USER=api_user
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PASSWORD=dummy
+      - POSTGRES_DATABASE=api
+      - POSTGRES_PORT=5432

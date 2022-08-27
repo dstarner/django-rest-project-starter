@@ -1,0 +1,8 @@
+# tag:
+#   description: |
+#     Something here
+#   x-displayName: My Model
+# tagGroups:
+#   - name: Group
+#     tags:
+#       - tag
