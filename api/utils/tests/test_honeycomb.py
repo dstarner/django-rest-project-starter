@@ -1,8 +1,9 @@
 from types import FunctionType
 from unittest import mock
+
 from django.test import TestCase
 
-from ..honeycomb import honeycomb_span, NoOpHoneycomb
+from ..honeycomb import NoOpHoneycomb, honeycomb_span
 
 
 class HoneycombWrapperTestCase(TestCase):
