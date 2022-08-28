@@ -71,7 +71,7 @@ GIT_BASE_DIR = BASE_DIR.parent
 
 IS_TESTING = is_testing()
 IS_MANAGEMENT_CMD = is_management_cmd()
-TEST_RUNNER = 'api.utils.tests.runner.PytestTestRunner'
+TEST_RUNNER = 'api.utils.testing.runner.PytestTestRunner'
 
 
 # SECURITY WARNING: keep the secret key used in production secret!

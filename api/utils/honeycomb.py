@@ -8,6 +8,11 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
+class NoOpHoneycomb(Mock):
+    """A mock for when honeycomb is not enabled so the contextmanager still works, but as a no-op
+    """
+
+
 @contextmanager
 def honeycomb_span(name, **kwargs):
     """
@@ -17,12 +22,13 @@ def honeycomb_span(name, **kwargs):
     allowed_columns = settings.HONEYCOMB_ALLOWED_COLUMNS
 
     if not settings.USE_HONEYCOMB:
-        yield Mock()
+        yield NoOpHoneycomb()
     else:
         with beeline.tracer(name, **kwargs):
-            def _add_context(data: dict):
+            def _add_context(data: dict = None, **kwargs):
                 """This provides a chance to whitelist / filter context columns
                 """
+                data = {**data, **kwargs} if data else kwargs
                 cleaned_data = {k: v for k, v in data.items() if k in allowed_columns}
                 if len(cleaned_data) != len(data):
                     logger.warning(
