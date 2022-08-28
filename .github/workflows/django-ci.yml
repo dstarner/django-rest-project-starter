@@ -1,0 +1,81 @@
+name: Django CI
+
+env: {}
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  Validate:
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: api_test
+          POSTGRES_PASSWORD: badpassword
+          POSTGRES_DB: api_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+        - 5432:5432
+
+    strategy:
+      max-parallel: 4
+      matrix:
+        validations:
+        - cmd: lint
+          migration: false
+        - cmd: test --failfast
+          migration: false
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Install OS Dependencies
+      run: |
+        sudo apt-get install -y --no-install-recommends libmemcached-dev libpq-dev gcc
+        python -m pip install --upgrade pipenv
+    
+    - id: cache-pipenv
+      uses: actions/cache@v1
+      with:
+        path: ~/.local/share/virtualenvs
+        key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
+
+    - name: Install Python dependencies
+      if: steps.cache-pipenv.outputs.cache-hit != 'true'
+      run: |
+        pipenv install --deploy --dev
+    
+    - name: Migrate Test Database
+      if: matrix.validations.migration
+      run: |
+        pipenv run ./manage.py migrate
+      env:
+        POSTGRES_HOST: localhost
+        POSTGRES_USER: api_test
+        POSTGRES_DATABASE: api_test
+        POSTGRES_PASSWORD: badpassword
+        POSTGRES_PORT: 5432
+    
+    - name: manage.py ${{ matrix.validations.cmd }}
+      run: |
+        pipenv run ./manage.py ${{ matrix.validations.cmd }}
+      env:
+        POSTGRES_HOST: localhost
+        POSTGRES_USER: api_test
+        POSTGRES_DATABASE: api_test
+        POSTGRES_PASSWORD: badpassword
+        POSTGRES_PORT: 5432
