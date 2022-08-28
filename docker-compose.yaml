@@ -55,9 +55,9 @@ services:
     command:
       - /src/manage.py
       - runserver
-      - "0.0.0.0:80"
+      - "0.0.0.0:8000"
     ports:
-      - "80:80"
+      - "8000:8000"
 
   task-worker:
     <<: *base-app
