@@ -19,6 +19,8 @@ import beeline
 import dj_database_url
 from decouple import Csv, Undefined, UndefinedValueError, config
 
+_Undefined = Undefined()
+
 
 def is_management_cmd(argv=None):
     if not argv:
@@ -39,13 +41,13 @@ def is_testing(argv=None):
     return len(argv) >= 2 and argv[1] in ['test', 'checks', 'lint']
 
 
-def live_config(*args, default=Undefined(), **kwargs):
+def live_config(*args, default=_Undefined, **kwargs):
     if is_testing() or is_management_cmd():
         default = None
     return config(*args, default=default, **kwargs)
 
 
-def multi_config(*env_var_names, cast=str, default=Undefined()):
+def multi_config(*env_var_names, cast=str, default=_Undefined):
     """Allows loading a config from multiple variable locations
     """
     if not env_var_names:

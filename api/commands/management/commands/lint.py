@@ -1,5 +1,7 @@
 import sys
 
+from django.conf import settings
+
 from ..base import AdminCommand
 
 
@@ -22,7 +24,7 @@ class Command(AdminCommand):
     def handle(self, *args, **options):
 
         if not options['syntax']:
-            isort_args = ['--recursive', 'api']
+            isort_args = [settings.API_IMPORT_ROOT]
             if options['diff']:
                 isort_args = ['--diff'] + isort_args
             if not options['fix']:
@@ -35,7 +37,7 @@ class Command(AdminCommand):
                     f'"{" ".join(sys.argv)} {self.ISORT_FIX_ARG}"'
                 )
 
-        flake_args = ['flake8', 'api', '--statistics', '--count']
+        flake_args = ['flake8', settings.API_IMPORT_ROOT, '--statistics', '--count']
         if options['syntax']:
             self.info('Syntax checking...')
             flake_args += ['--select=E9,F63,F7,F82', '--show-source']
